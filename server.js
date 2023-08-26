@@ -1,8 +1,11 @@
 const express = require('express');
+const DefaultAzureCredential = require('@azure/identity');
 const app = express();
 const port = 3000;
 
-const upload = require('./upload');
+const uploadStrategy = require('./upload');
+const azureUpload = require('./azure');
+const getStream = require('into-stream');
 
 const appView = __dirname + '/views/index.html';
 
@@ -10,8 +13,18 @@ app.get("/", function(req, res) {
     res.sendFile(appView);
 })
 
-app.post('/upload', upload.single('file'), (req, res) => {
+app.post('/upload', uploadStrategy.single('file'), (req, res) => {
+    //Update this upload the data from the form
+    const fileName = req.file.originalname
+    const stream = getStream(req.file.buffer)
+    const streamLength = req.file.buffer.length
+    
+    azureUpload(fileName, stream, streamLength)
+    .then(() => console.log("Done"))
+    .catch((ex) => console.log(ex.message));
+
     res.json({ message: 'File upload succesfull'});
+
 });
 
 app.listen(port, () => {
