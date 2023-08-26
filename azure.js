@@ -18,7 +18,7 @@ async function azureUpload(fileName, stream, streamLength) {
 
         // Create a unique name for the container
         // const containerName = 'quickstart' + uuidv1();
-        const containerName = 'quickstart6d8de930-4150-11ee-9e5f-2564f37132ab';
+        const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME;
 
         // console.log('\nCreating container...');
         console.log('\t', containerName);
