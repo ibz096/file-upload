@@ -25,12 +25,7 @@ async function azureUpload(fileName, stream, streamLength) {
 
         // Get a reference to a container
         const containerClient = blobServiceClient.getContainerClient(containerName);
-        // Create the container
-        // const createContainerResponse = await containerClient.create();
-        // console.log(
-        //     `Container was created successfully.\n\trequestId:${createContainerResponse.requestId}\n\tURL: ${containerClient.url}`
-        // );
-
+        
         // Create a unique name for the blob
         const blobName = uuidv1() + '-' + fileName;
 

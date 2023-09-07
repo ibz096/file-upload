@@ -1,15 +1,17 @@
 const express = require('express');
 const DefaultAzureCredential = require('@azure/identity');
+const { PrismaClient } = require('@prisma/client')
 const app = express();
 const port = 3000;
 
 const uploadStrategy = require('./upload');
 const azureUpload = require('./azure');
 const getStream = require('into-stream');
+const prisma = new PrismaClient()
 
 const appView = __dirname + '/views/index.html';
 
-app.get("/", function(req, res) {
+app.get("/", function (req, res) {
     res.sendFile(appView);
 })
 
@@ -18,12 +20,21 @@ app.post('/upload', uploadStrategy.single('file'), (req, res) => {
     const fileName = req.file.originalname
     const stream = getStream(req.file.buffer)
     const streamLength = req.file.buffer.length
-    
-    azureUpload(fileName, stream, streamLength)
-    .then(() => console.log("Done"))
-    .catch((ex) => console.log(ex.message));
 
-    res.json({ message: 'File upload succesfull'});
+    azureUpload(fileName, stream, streamLength)
+        .then(
+            async function () {
+                const fileUpload =  await prisma.file.create({
+                    data: {
+                        filename: fileName,
+                    },
+                })
+                console.log("Done")
+            }
+        )
+        .catch((ex) => console.log(ex.message));
+
+    res.json({ message: 'File upload succesfull' });
 
 });
 
