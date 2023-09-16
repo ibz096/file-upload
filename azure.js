@@ -43,7 +43,7 @@ async function azureUpload(fileName, stream, streamLength) {
             `Blob was uploaded successfully. requestId: ${uploadBlobResponse.requestId}`
         );
 
-
+        return blobName;
 
     } catch (err) {
         console.error(`Error: ${err.message}`);
