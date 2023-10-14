@@ -25,8 +25,8 @@ app.post('/upload', uploadStrategy.single('file'), (req, res) => {
         .then(
             async function (result) {
                 //Destructing the result {value1: renamedValue1, value2: renamedValue2} = result
-                const {blobName: newFileName, blobUrlSAS: blobUrl} = result
-                const fileUpload =  await prisma.file.create({
+                const { blobName: newFileName, blobUrlSAS: blobUrl } = result
+                const fileUpload = await prisma.file.create({
                     data: {
                         filename: fileName,
                         newfilename: newFileName,
@@ -37,11 +37,18 @@ app.post('/upload', uploadStrategy.single('file'), (req, res) => {
                 console.log(`BlobSASURL Name: ${blobUrl}`);
 
                 console.log("Done")
+
+                // Send blobUrl in the response
+                res.json({
+                    message: 'File upload successful',
+                    blobUrl: blobUrl,
+                });
             }
         )
-        .catch((ex) => console.log(ex.message));
-
-    res.json({ message: 'File upload succesfull' });
+        .catch((ex) => {
+            console.log(ex.message);
+            res.status(500).json({ message: 'File upload failed' });
+        });
 
 });
 
