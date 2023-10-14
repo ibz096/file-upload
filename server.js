@@ -23,14 +23,19 @@ app.post('/upload', uploadStrategy.single('file'), (req, res) => {
 
     azureUpload(fileName, stream, streamLength)
         .then(
-            async function (newFileName) {
+            async function (result) {
+                //Destructing the result {value1: renamedValue1, value2: renamedValue2} = result
+                const {blobName: newFileName, blobUrlSAS: blobUrl} = result
                 const fileUpload =  await prisma.file.create({
                     data: {
                         filename: fileName,
                         newfilename: newFileName,
+                        link: blobUrl,
                     },
                 })
-                console.log(`Newfile Name ${newFileName}`);
+                console.log(`Newfile Name: ${newFileName}`);
+                console.log(`BlobSASURL Name: ${blobUrl}`);
+
                 console.log("Done")
             }
         )
