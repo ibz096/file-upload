@@ -3,6 +3,7 @@
 	"author": "Ibrahim Ahmed",
 	"description": "File Share Project on Azure",
 	"version": "1.0.0",
+	"type": "module",
 	"dependencies": {
 		"@azure/identity": "^2.1.0",
 		"@azure/keyvault-secrets": "^4.7.0",

@@ -1,122 +1,126 @@
-const { 
-    BlobServiceClient,
-    generateAccountSASQueryParameters, 
-    AccountSASPermissions, 
-    AccountSASServices,
-    AccountSASResourceTypes,
-    StorageSharedKeyCredential,
-    SASProtocol 
-} = require("@azure/storage-blob");
-const { v1: uuidv1 } = require("uuid");
-require("dotenv").config();
-const { DefaultAzureCredential } = require('@azure/identity');
+import { BlobServiceClient, generateAccountSASQueryParameters, AccountSASPermissions, AccountSASServices, AccountSASResourceTypes, StorageSharedKeyCredential, SASProtocol } from "@azure/storage-blob";
+import { v1 as uuidv1 } from "uuid";
+import { DefaultAzureCredential } from '@azure/identity';
+import { SecretClient } from "@azure/keyvault-secrets";
 
-const constants = {
-    accountName: process.env.AZURE_STORAGE_ACCOUNT_NAME,
-    accountKey: process.env.AZURE_STORAGE_ACCOUNT_KEY,
-    containerName: process.env.AZURE_STORAGE_ACCOUNT_CONTAINER_NAME
-};
-
-const sharedKeyCredential = new StorageSharedKeyCredential(
-    constants.accountName,
-    constants.accountKey
-);
-
-async function createAccountSas() {
-
-    const sasOptions = {
-
-        services: AccountSASServices.parse("b").toString(),          // blobs, tables, queues, files
-        resourceTypes: AccountSASResourceTypes.parse("o").toString(), // service, container, object
-        permissions: AccountSASPermissions.parse("r"),          // permissions
-        protocol: SASProtocol.Https,
-        startsOn: new Date(),
-        expiresOn: new Date(new Date().valueOf() + (10 * 60 * 1000)),   // 10 minutes
+export async function create() {
+    const constants = {
+        accountName: await fetchSecretFromAzureKeyVault('AZURE-STORAGE-ACCOUNT-NAME'),//process.env.AZURE_STORAGE_ACCOUNT_NAME,
+        accountKey: process.env.AZURE_STORAGE_ACCOUNT_KEY,
+        containerName: process.env.AZURE_STORAGE_ACCOUNT_CONTAINER_NAME
     };
 
-    const sasToken = generateAccountSASQueryParameters(
-        sasOptions,
-        sharedKeyCredential 
-    ).toString();
+    const sharedKeyCredential = new StorageSharedKeyCredential(
+        constants.accountName,
+        constants.accountKey
+    );
 
-    console.log(`From Function CreateAccountSAS(): sasToken = '${sasToken}'\n`);
+    //Azure Key Vault Testing
 
-    // prepend sasToken with `?`
-    return (sasToken[0] === '?') ? sasToken : `?${sasToken}`;
-}
+    async function fetchSecretFromAzureKeyVault(secretName) {
+        const keyVaultName = "file-upload-vault";
+        const keyVaultrUrl = "https://" + keyVaultName + ".vault.azure.net";
 
-async function useSasToken(sasToken, containerName, blobName) {
+        const credential = new DefaultAzureCredential();
 
-    // Use SAS token to create authenticated connection to Blob Service
-    const blobUrl = `https://${constants.accountName}.blob.core.windows.net/${containerName}/${blobName}${sasToken}`
-    console.log(`From Fucntions useSasToken(): ${blobUrl}`);
+        const secretClient = new SecretClient(keyVaultrUrl, credential);
 
-    return blobUrl
-    
-    // const blobServiceClient = new BlobServiceClient(blobUrl);
+        //Read secret
+        const secret = await secretClient.getSecret(secretName);
 
-    // // Get Blob Service properties
-    // const blobServicePropertiesResponse = await blobServiceClient.getProperties();
+        return secret.value
+    }
+    //
+    async function createAccountSas() {
 
-    // // Display Blob Service properties
-    // console.log(`Success: Properties ${JSON.stringify(blobServicePropertiesResponse)}\n`);
+        const sasOptions = {
 
+            services: AccountSASServices.parse("b").toString(),          // blobs, tables, queues, files
+            resourceTypes: AccountSASResourceTypes.parse("o").toString(), // service, container, object
+            permissions: AccountSASPermissions.parse("r"),          // permissions
+            protocol: SASProtocol.Https,
+            startsOn: new Date(),
+            expiresOn: new Date(new Date().valueOf() + (10 * 60 * 1000)),   // 10 minutes
+        };
 
-}
+        const sasToken = generateAccountSASQueryParameters(
+            sasOptions,
+            sharedKeyCredential
+        ).toString();
 
-async function azureUpload(fileName, stream, streamLength) {
-    try {
-        console.log("Azure Blob storage v12 - JavaScript quickstart sample");
+        console.log(`From Function CreateAccountSAS(): sasToken = '${sasToken}'\n`);
 
-        // Quick start code goes here
-        const accountName = constants.accountName;
-        if (!accountName) throw Error('Azure Storage accountName not found');
+        // prepend sasToken with `?`
+        return (sasToken[0] === '?') ? sasToken : `?${sasToken}`;
+    }
 
-        const blobServiceClient = new BlobServiceClient(
-            `https://${accountName}.blob.core.windows.net`,
-            new DefaultAzureCredential()
-        );
+    async function useSasToken(sasToken, containerName, blobName) {
 
-        // Create a unique name for the container
-        // const containerName = 'quickstart' + uuidv1();
-        const containerName = constants.containerName;
+        // Use SAS token to create authenticated connection to Blob Service
+        const blobUrl = `https://${constants.accountName}.blob.core.windows.net/${containerName}/${blobName}${sasToken}`
+        console.log(`From Fucntions useSasToken(): ${blobUrl}`);
 
-        // console.log('\nCreating container...');
-        console.log('\t', containerName);
+        return blobUrl
 
-        // Get a reference to a container
-        const containerClient = blobServiceClient.getContainerClient(containerName);
-        
-        // Create a unique name for the blob
-        const blobName = uuidv1() + '-' + fileName;
+    }
 
-        // Get a block blob client
-        const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+    async function upload(fileName, stream, streamLength) {
+        try {
+            console.log("Azure Blob storage v12 - JavaScript quickstart sample");
 
-        // Display blob name and url
-        console.log(
-            `\nUploading to Azure storage as blob\n\tname: ${blobName}:\n\tURL: ${blockBlobClient.url}`
-        );
+            // Quick start code goes here
+            const accountName = constants.accountName;
+            if (!accountName) throw Error('Azure Storage accountName not found');
 
-        // Upload data to the blob
-        const uploadBlobResponse = await blockBlobClient.uploadStream(stream, streamLength);
-        console.log(
-            `Blob was uploaded successfully. requestId: ${uploadBlobResponse.requestId}`
-        );
+            const blobServiceClient = new BlobServiceClient(
+                `https://${accountName}.blob.core.windows.net`,
+                new DefaultAzureCredential()
+            );
 
-        //Create SAS Token
-        const sasToken = await createAccountSas();
+            // Create a unique name for the container
+            // const containerName = 'quickstart' + uuidv1();
+            const containerName = constants.containerName;
 
-        const blobUrlSAS = await useSasToken(sasToken, containerName, blobName);
-        console.log(`BlobURL: ${blobUrlSAS}`);
+            // console.log('\nCreating container...');
+            console.log('\t', containerName);
 
-        const result = {blobName, blobUrlSAS};
+            // Get a reference to a container
+            const containerClient = blobServiceClient.getContainerClient(containerName);
 
-        return result
+            // Create a unique name for the blob
+            const blobName = uuidv1() + '-' + fileName;
 
-    } catch (err) {
-        console.error(`Error: ${err.message}`);
+            // Get a block blob client
+            const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+
+            // Display blob name and url
+            console.log(
+                `\nUploading to Azure storage as blob\n\tname: ${blobName}:\n\tURL: ${blockBlobClient.url}`
+            );
+
+            // Upload data to the blob
+            const uploadBlobResponse = await blockBlobClient.uploadStream(stream, streamLength);
+            console.log(
+                `Blob was uploaded successfully. requestId: ${uploadBlobResponse.requestId}`
+            );
+
+            //Create SAS Token
+            const sasToken = await createAccountSas();
+
+            const blobUrlSAS = await useSasToken(sasToken, containerName, blobName);
+            console.log(`BlobURL: ${blobUrlSAS}`);
+
+            const result = { blobName, blobUrlSAS };
+
+            return result
+
+        } catch (err) {
+            console.error(`Error: ${err.message}`);
+        }
+    }
+
+    return {
+        upload,
+        fetchSecretFromAzureKeyVault
     }
 }
-
-module.exports = azureUpload;
