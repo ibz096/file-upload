@@ -5,14 +5,14 @@ import { SecretClient } from "@azure/keyvault-secrets";
 
 export async function create() {
     const constants = {
-        accountName: await fetchSecretFromAzureKeyVault('AZURE-STORAGE-ACCOUNT-NAME'),//process.env.AZURE_STORAGE_ACCOUNT_NAME,
-        accountKey: process.env.AZURE_STORAGE_ACCOUNT_KEY,
+        accountName: process.env.AZURE_STORAGE_ACCOUNT_NAME,
+        //accountKey: await fetchSecretFromAzureKeyVault('AZURE-STORAGE-ACCOUNT-KEY'),
         containerName: process.env.AZURE_STORAGE_ACCOUNT_CONTAINER_NAME
     };
 
     const sharedKeyCredential = new StorageSharedKeyCredential(
         constants.accountName,
-        constants.accountKey
+        await fetchSecretFromAzureKeyVault('AZURE-STORAGE-ACCOUNT-KEY')//constants.accountKey
     );
 
     //Azure Key Vault Testing
