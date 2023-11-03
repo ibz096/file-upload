@@ -17,4 +17,6 @@ model File {
   filename  String?
   newfilename String?
   link      String?
+  expired   Boolean @default(false)
+
 }
