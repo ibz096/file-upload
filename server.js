@@ -23,6 +23,11 @@ app.get("/", function (req, res) {
     res.sendFile(appView);
 })
 
+app.get("/results", async function (req, res) {
+    const records = await prisma.file.findMany()
+    res.json(records)
+})
+
 app.post('/upload', uploadStrategy.single('file'), async (req, res) => {
     //Update this upload the data from the form
     const fileName = req.file.originalname
