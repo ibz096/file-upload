@@ -17,7 +17,9 @@ const prisma = new PrismaClient({
 
 const __dirname = new URL('.', import.meta.url).pathname;
 
-const appView = __dirname + '/views/index.html';
+const appView = __dirname + '/public/views/index.html';
+
+app.use(express.static('public'));
 
 app.get("/", function (req, res) {
     res.sendFile(appView);

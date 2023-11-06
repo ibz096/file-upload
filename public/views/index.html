@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>File Upload</title>
+  <script src="/js/client.js" defer></script>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <h1>File Upload</h1>
+  <form action="/upload" method="POST" enctype="multipart/form-data">
+    <input type="file" name="file" required>
+    <button type="submit">Upload</button>
+  </form>
+  <div id="databrowser">
+    <div id="buttons-container"></div>
+    <div id="results-container">
+      <table>
+          <thead>
+            <th>timestamp</th>
+            <th>filename</th>
+            <th>link</th>
+            <th>expired</th>
+          </thead>
+          <tbody id="results-data">
+
+          </tbody>
+      </table>
+    </div>
+  </div>
+  <!-- Display the following in a data table:  -->
+  <!-- timestamp, filename, link, expired -->
+</body>
+</html>
