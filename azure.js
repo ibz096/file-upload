@@ -7,7 +7,8 @@ export async function create() {
     const constants = {
         accountName: process.env.AZURE_STORAGE_ACCOUNT_NAME,
         //accountKey: await fetchSecretFromAzureKeyVault('AZURE-STORAGE-ACCOUNT-KEY'),
-        containerName: process.env.AZURE_STORAGE_ACCOUNT_CONTAINER_NAME
+        containerName: process.env.AZURE_STORAGE_ACCOUNT_CONTAINER_NAME,
+        keyVaultName: process.env.KEY_VAULT_NAME
     };
 
     const sharedKeyCredential = new StorageSharedKeyCredential(
@@ -18,7 +19,7 @@ export async function create() {
     //Azure Key Vault Testing
 
     async function fetchSecretFromAzureKeyVault(secretName) {
-        const keyVaultName = "file-upload-vault";
+        const keyVaultName = constants.keyVaultName;
         const keyVaultrUrl = "https://" + keyVaultName + ".vault.azure.net";
 
         const credential = new DefaultAzureCredential();
