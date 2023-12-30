@@ -1,0 +1,255 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "defaultValue": "[resourceGroup().location]",
+            "type": "String",
+            "metadata": {
+                "description": "Location for all resources."
+            }
+        },
+        "sqlServerName": {
+            "defaultValue": "[format('sqlServer-{0}', uniqueString(resourceGroup().id))]",
+            "minLength": 2,
+            "type": "String",
+            "metadata": {
+                "description": "Db Server name."
+            }
+        },
+        "sqlServerUsername": {
+            "defaultValue": "DbAdmin",
+            "type": "String"
+        },
+        "sqlServerPassword": {
+            "defaultValue": "DbPassword@123",
+            "type": "String"
+        },
+        "sqlDatabaseName": {
+            "defaultValue": "file-uploads-db",
+            "type": "String"
+        },
+        "userAssignedIdentities_file_upload_ident_name": {
+            "defaultValue": "[format('userManagedIdentity-{0}', uniqueString(resourceGroup().id))]",
+            "type": "String"
+        },
+        "roleNameGuid": {
+            "type": "string",
+            "defaultValue": "[newGuid()]",
+            "metadata": {
+                "description": "A new GUID used to identify the role assignment"
+            }
+        },
+        "storageAccountName": {
+            "defaultValue": "[format('storageaccount{0}', substring(uniqueString(resourceGroup().id),0,4))]",
+            "type": "String",
+            "metadata": {
+                "description": "Specifies the name of the Azure Storage account."
+            }
+        },
+        "containerName": {
+            "defaultValue": "uploads",
+            "type": "String",
+            "metadata": {
+                "description": "Specifies the name of the blob container."
+            }
+        },
+        "webAppName": {
+            "defaultValue": "[format('webApp-{0}', uniqueString(resourceGroup().id))]",
+            "type": "String"
+        },
+        "appServicePlanPortalName": {
+            "defaultValue": "[format('AppServicePlan-{0}', parameters('webAppName'))]",
+            "type": "String"
+        },
+        "sku": {
+            "defaultValue": "F1",
+            "type": "String",
+            "metadata": {
+                "description": "The SKU of App Service Plan."
+            }
+        },
+        "linuxFxVersion": {
+            "defaultValue": "NODE|18-lts",
+            "type": "String",
+            "metadata": {
+                "description": "The Runtime stack of current web app"
+            }
+        },
+        "repoUrl": {
+            "defaultValue": "https://github.com/ibz096/file-upload/",
+            "type": "String",
+            "metadata": {
+                "description": "Optional Git Repo URL"
+            }
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+            "apiVersion": "2023-01-31",
+            "name": "[parameters('userAssignedIdentities_file_upload_ident_name')]",
+            "location": "[resourceGroup().location]"
+        },
+        {
+            "type": "Microsoft.Sql/servers",
+            "apiVersion": "2022-05-01-preview",
+            "name": "[parameters('sqlServerName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "administratorLogin": "[parameters('sqlServerUsername')]",
+                "administratorLoginPassword": "[parameters('sqlServerPassword')]",
+                "publicNetworkAccess": "Enabled"
+            },
+            "resources": [
+                {
+                    "type": "firewallrules",
+                    "apiVersion": "2020-02-02-preview",
+                    "name": "AllowAllMicrosoftAzureIps",
+                    "location": "[parameters('location')]",
+                    "dependsOn": [
+                        "[parameters('sqlServerName')]"
+                    ],
+                    "properties": {
+                        "endIpAddress": "0.0.0.0",
+                        "startIpAddress": "0.0.0.0"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "Microsoft.Sql/servers/databases",
+            "apiVersion": "2020-02-02-preview",
+            "name": "[concat(parameters('sqlServerName'), '/', parameters('sqlDatabaseName'))]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[parameters('sqlServerName')]"
+            ],
+            "sku": {
+                "name": "Basic",
+                "tier": "Basic"
+            },
+            "properties": {
+                "collation": "SQL_Latin1_General_CP1_CI_AS",
+                "maxSizeBytes": 104857600,
+                "zoneRedundant": false,
+                "requestedBackupStorageRedundancy": "Local"
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2022-05-01",
+            "name": "[parameters('storageAccountName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('userAssignedIdentities_file_upload_ident_name'))]"
+            ],
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "accessTier": "Hot",
+                "encryption": {
+                    "requireInfrastructureEncryption": true
+                }
+
+            }
+        },
+        {
+            "type": "Microsoft.Authorization/roleAssignments",
+            "apiVersion": "2022-04-01",
+            "name": "[parameters('roleNameGuid')]",
+            "scope": "[concat('Microsoft.Storage/storageAccounts', '/', parameters('storageAccountName'))]",
+            "dependsOn": [
+                "[parameters('storageAccountName')]"
+            ],
+            "properties": {
+                "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('userAssignedIdentities_file_upload_ident_name'))).principalId]",
+                "principalType": "ServicePrincipal"
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "apiVersion": "2022-05-01",
+            "name": "[format('{0}/default/{1}', parameters('storageAccountName'), parameters('containerName'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Web/serverfarms",
+            "apiVersion": "2021-02-01",
+            "name": "[parameters('appServicePlanPortalName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "[parameters('sku')]"
+            },
+            "kind": "linux",
+            "properties": {
+                "reserved": true
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2021-02-01",
+            "name": "[parameters('webAppName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanPortalName'))]"
+            ],
+            "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                    "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('userAssignedIdentities_file_upload_ident_name'))]": {}
+                }
+            },
+            "properties": {
+                "httpsOnly": true,
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanPortalName'))]",
+                "siteConfig": {
+                    "linuxFxVersion": "[parameters('linuxFxVersion')]",
+                    "minTlsVersion": "1.2",
+                    "ftpsState": "FtpsOnly",
+                    "appSettings": [
+                        {
+                            "name": "AZURE_CLIENT_ID",
+                            "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('userAssignedIdentities_file_upload_ident_name'))).clientId]",
+                            "slotSetting": false
+                        },
+                        {
+                            "name": "AZURE_STORAGE_ACCOUNT_CONTAINER_NAME",
+                            "value": "[parameters('containerName')]",
+                            "slotSetting": false
+                        },
+                        {
+                            "name": "AZURE_STORAGE_ACCOUNT_NAME",
+                            "value": "[parameters('storageAccountName')]",
+                            "slotSetting": false
+                        },
+                        {
+                            "name": "KEY_VAULT_NAME",
+                            "value": "file-upload-vault",
+                            "slotSetting": false
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/sourcecontrols",
+            "apiVersion": "2021-02-01",
+            "name": "[format('{0}/{1}', parameters('webAppName'), 'web')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('webAppName'))]"
+            ],
+            "properties": {
+                "repoUrl": "[parameters('repoUrl')]",
+                "branch": "master",
+                "isManualIntegration": true
+            },
+            "condition": "[contains(parameters('repoUrl'), 'https://github.com/ibz096/file-upload')]"
+        }
+    ]
+}
