@@ -259,12 +259,12 @@
             "condition": "[contains(parameters('repoUrl'), 'https://github.com/ibz096/file-upload')]"
         },
         {
+            "type": "Microsoft.KeyVault/vaults",
             "name": "[parameters('azureKeyVaultName')]",
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
                 "[resourceId('Microsoft.Sql/servers', parameters('sqlServerName'))]"
-                ],
-            "type": "Microsoft.KeyVault/vaults",
+            ],
             "apiVersion": "2023-02-01",
             "location": "[resourceGroup().location]",
             "tags": {
@@ -289,10 +289,9 @@
                         "[resourceId('Microsoft.KeyVault/vaults', parameters('azureKeyVaultName'))]"
                     ],
                     "properties": {
-                        "value": "secretValue"
-                    }
+                        "value": "[concat('sqlserver://', parameters('sqlServerName'),'.database.windows.net:1433;database=',parameters('sqlDatabaseName'),';user=',parameters('sqlServerUsername'),'@',parameters('sqlServerName'),';password=',parameters('sqlServerPassword'),';encrypt=true')]"                    }
                 },
-                                {
+                {
                     "type": "secrets",
                     "name": "AZURE-STORAGE-ACCOUNT-KEY",
                     "apiVersion": "2016-10-01",
@@ -300,7 +299,7 @@
                         "[resourceId('Microsoft.KeyVault/vaults', parameters('azureKeyVaultName'))]"
                     ],
                     "properties": {
-                        "value": "secretValue"
+                        "value": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2019-06-01').keys[0].value]"
                     }
                 }
             ]
