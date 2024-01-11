@@ -133,12 +133,15 @@
                 "[parameters('sqlServerName')]"
             ],
             "sku": {
-                "name": "Basic",
-                "tier": "Basic"
+                "name": "GP_S_Gen5",
+                "tier": "GeneralPurpose",
+                "family": "Gen5",
+                "capacity": 1
             },
+            "kind": "v12.0,user,vcore,serverless",
             "properties": {
                 "collation": "SQL_Latin1_General_CP1_CI_AS",
-                "maxSizeBytes": 104857600,
+                "maxSizeBytes": 1073741824,
                 "zoneRedundant": false,
                 "requestedBackupStorageRedundancy": "Local"
             }
